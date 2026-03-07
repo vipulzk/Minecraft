@@ -271,6 +271,38 @@ function surfaceTopY(surface) {
   return surface.y + 1.02;
 }
 
+function createHealthBar() {
+  const root = new THREE.Group();
+  root.position.set(0, 1.55, 0);
+
+  const background = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.72, 0.11),
+    new THREE.MeshBasicMaterial({
+      color: "#241314",
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+    }),
+  );
+  background.renderOrder = 7;
+  root.add(background);
+
+  const fill = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.66, 0.07),
+    new THREE.MeshBasicMaterial({
+      color: "#49cf62",
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+    }),
+  );
+  fill.position.z = 0.002;
+  fill.renderOrder = 8;
+  root.add(fill);
+
+  return { root, fill };
+}
+
 export class AnimalManager {
   constructor(scene, world) {
     this.scene = scene;
@@ -369,14 +401,24 @@ export class AnimalManager {
   createMob({ id, type, variant, x, y, z, seed }) {
     const { group, legs, headPivot } = createMobMesh(type, variant);
     const rng = createRng(seed);
+    const healthBar = createHealthBar();
+    const maxHealth = type === "chicken" ? 4 : type === "sheep" ? 5 : 6;
     group.position.set(x, y, z);
     group.rotation.y = rng() * Math.PI * 2;
+    group.add(healthBar.root);
+    group.userData.mobId = id;
+    group.traverse((child) => {
+      child.userData.mobId = id;
+    });
 
     return {
       id,
       type,
       variant,
       group,
+      health: maxHealth,
+      maxHealth,
+      healthBar,
       legs,
       headPivot,
       rng,
@@ -388,6 +430,8 @@ export class AnimalManager {
       speed: type === "chicken" ? 0.55 : 0.8 + rng() * 0.22,
       phase: rng() * Math.PI * 2,
       animationTime: rng() * Math.PI * 2,
+      deathTimer: 0,
+      deathSpinDirection: rng() > 0.5 ? 1 : -1,
     };
   }
 
@@ -403,8 +447,91 @@ export class AnimalManager {
     }
   }
 
+  getTargetMeshes() {
+    return [...this.mobs.values()]
+      .filter((mob) => mob.state !== "dying")
+      .map((mob) => mob.group);
+  }
+
+  resolveHit(hit) {
+    const mob = hit?.object?.parent?.userData?.mobId
+      ? this.mobs.get(hit.object.parent.userData.mobId) ?? null
+      : hit?.object?.userData?.mobId
+        ? this.mobs.get(hit.object.userData.mobId) ?? null
+        : null;
+    return mob && mob.state !== "dying" ? mob : null;
+  }
+
+  updateHealthBar(mob) {
+    const ratio = THREE.MathUtils.clamp(mob.health / mob.maxHealth, 0, 1);
+    const clamped = Math.max(0.001, ratio);
+    mob.healthBar.fill.scale.x = clamped;
+    mob.healthBar.fill.position.x = (clamped - 1) * 0.33;
+    if (ratio > 0.6) {
+      mob.healthBar.fill.material.color.set("#49cf62");
+    } else if (ratio > 0.3) {
+      mob.healthBar.fill.material.color.set("#d8b53f");
+    } else {
+      mob.healthBar.fill.material.color.set("#d15858");
+    }
+  }
+
+  despawnMob(mob) {
+    this.scene.remove(mob.group);
+    this.mobs.delete(mob.id);
+
+    for (const [chunkKey, mobIds] of this.chunkMobIds.entries()) {
+      const index = mobIds.indexOf(mob.id);
+      if (index >= 0) {
+        mobIds.splice(index, 1);
+        if (mobIds.length === 0) {
+          this.chunkMobIds.delete(chunkKey);
+        }
+        break;
+      }
+    }
+  }
+
+  damageMob(mobId, damage) {
+    const mob = this.mobs.get(mobId);
+    if (!mob || mob.state === "dying") {
+      return null;
+    }
+
+    mob.health -= damage;
+    this.updateHealthBar(mob);
+
+    if (mob.health > 0) {
+      mob.state = "flee";
+      mob.stateTimer = 1.4;
+      mob.heading += Math.PI;
+      return { defeated: false, mob };
+    }
+
+    mob.health = 0;
+    mob.state = "dying";
+    mob.stateTimer = 0;
+    mob.deathTimer = 0.55;
+    mob.healthBar.root.visible = false;
+
+    return { defeated: true, mob };
+  }
+
   updateMob(mob, delta, playerPosition) {
     const position = mob.group.position;
+    if (mob.state === "dying") {
+      mob.deathTimer -= delta;
+      mob.group.rotation.z += delta * 8 * mob.deathSpinDirection;
+      mob.group.position.y -= delta * 1.4;
+      const scale = Math.max(0.05, mob.group.scale.x - delta * 1.9);
+      mob.group.scale.setScalar(scale);
+      if (mob.deathTimer <= 0) {
+        this.despawnMob(mob);
+      }
+      return;
+    }
+
+    mob.healthBar.root.lookAt(playerPosition);
     const distanceToPlayer = position.distanceTo(playerPosition);
     const distanceFromHome = Math.hypot(position.x - mob.homeX, position.z - mob.homeZ);
 

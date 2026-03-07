@@ -21,6 +21,7 @@ const BLOCK_IDS = {
   wood: 5,
   leaves: 6,
   water: 7,
+  farmland: 8,
 };
 
 const ID_TO_TYPE = Object.entries(BLOCK_IDS).reduce((lookup, [type, id]) => {
@@ -35,9 +36,11 @@ const SOLID_IDS = new Set([
   BLOCK_IDS.sand,
   BLOCK_IDS.wood,
   BLOCK_IDS.leaves,
+  BLOCK_IDS.farmland,
 ]);
 
 export const HOTBAR_TYPES = ["grass", "stone", "dirt", "wood", "sand"];
+export const SUPPORTED_BLOCK_TYPES = ["grass", "dirt", "stone", "sand", "wood", "leaves", "water", "farmland"];
 
 function mod(value, divisor) {
   return ((value % divisor) + divisor) % divisor;
@@ -149,6 +152,12 @@ function createMaterials() {
     }
   });
   const leavesTexture = makePixelTexture("#4d8742", "#2d5626");
+  const farmlandTexture = makePixelTexture("#71472b", "#4c2d18", (ctx) => {
+    ctx.fillStyle = "rgba(41, 23, 10, 0.35)";
+    for (let x = 2; x < 32; x += 6) {
+      ctx.fillRect(x, 0, 2, 32);
+    }
+  });
   const waterTexture = makePixelTexture("rgba(97, 171, 214, 0.72)", "rgba(212, 239, 255, 0.22)", (ctx) => {
     ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
     for (let y = 2; y < 32; y += 7) {
@@ -180,6 +189,7 @@ function createMaterials() {
     sand: new THREE.MeshLambertMaterial({ map: sandTexture }),
     wood: new THREE.MeshLambertMaterial({ map: woodTexture }),
     leaves: new THREE.MeshLambertMaterial({ map: leavesTexture }),
+    farmland: new THREE.MeshLambertMaterial({ map: farmlandTexture }),
     water: new THREE.MeshLambertMaterial({
       map: waterTexture,
       transparent: true,
@@ -350,10 +360,12 @@ export class VoxelWorld {
     this.interactableMeshes = [];
     this.columnCache = new Map();
     this.treeCache = new Map();
-    this.solidTypes = new Set(["grass", "dirt", "stone", "sand", "wood", "leaves"]);
+    this.solidTypes = new Set(["grass", "dirt", "stone", "sand", "wood", "leaves", "farmland"]);
     this.currentChunkX = null;
     this.currentChunkZ = null;
     this.currentViewDistance = BASE_VIEW_DISTANCE;
+    this.bulkEditDepth = 0;
+    this.pendingChunkRebuilds = new Set();
     this.spawnPoint = this.findSpawnPoint();
   }
 
@@ -898,7 +910,7 @@ export class VoxelWorld {
     );
   }
 
-  rebuildTouchedChunks(x, z) {
+  getTouchedChunkKeys(x, z) {
     const worldX = Math.floor(x);
     const worldZ = Math.floor(z);
     const chunkX = this.toChunkCoord(worldX);
@@ -921,7 +933,15 @@ export class VoxelWorld {
       targets.add(this.chunkKey(chunkX, chunkZ + 1));
     }
 
-    for (const key of targets) {
+    return targets;
+  }
+
+  flushPendingChunkRebuilds() {
+    if (this.pendingChunkRebuilds.size === 0) {
+      return;
+    }
+
+    for (const key of this.pendingChunkRebuilds) {
       const chunk = this.chunks.get(key);
       if (!chunk) {
         continue;
@@ -931,7 +951,34 @@ export class VoxelWorld {
       chunk.rebuild();
     }
 
+    this.pendingChunkRebuilds.clear();
     this.refreshInteractableMeshes();
+  }
+
+  rebuildTouchedChunks(x, z) {
+    const targets = this.getTouchedChunkKeys(x, z);
+    for (const key of targets) {
+      this.pendingChunkRebuilds.add(key);
+    }
+
+    if (this.bulkEditDepth === 0) {
+      this.flushPendingChunkRebuilds();
+    }
+  }
+
+  beginBulkEdit() {
+    this.bulkEditDepth += 1;
+  }
+
+  endBulkEdit() {
+    if (this.bulkEditDepth === 0) {
+      return;
+    }
+
+    this.bulkEditDepth -= 1;
+    if (this.bulkEditDepth === 0) {
+      this.flushPendingChunkRebuilds();
+    }
   }
 
   setBlockId(x, y, z, id) {

@@ -10,20 +10,80 @@
   <div class="app-shell">
     <div class="sky-tint"></div>
     <div class="hud">
-      <div class="brand">
-        <span class="brand__eyebrow">Voxel Sandbox</span>
-        <h1>Block World</h1>
-        <p>Break blocks, place blocks, survive or build.</p>
-      </div>
-      <div class="status-panel">
-        <div><span>Mode</span><strong id="modeLabel">Survival</strong></div>
-        <div><span>Block</span><strong id="blockLabel">Stone</strong></div>
-        <div><span>Coords</span><strong id="coordsLabel">0, 0, 0</strong></div>
-        <div><span>Target</span><strong id="targetLabel">None</strong></div>
-        <div><span>Loaded</span><strong id="loadedLabel">0 chunks</strong></div>
-        <div><span>Mobs</span><strong id="mobLabel">0 passive</strong></div>
+      <div class="hud__top">
+        <div class="hud__left">
+          <div class="brand">
+            <span class="brand__eyebrow">Voxel Sandbox</span>
+            <h1>Block World</h1>
+            <p>Break blocks, place blocks, survive or build.</p>
+          </div>
+
+          <div class="blueprint-panel">
+            <span class="brand__eyebrow">Blueprint Builder</span>
+            <h2 id="blueprintName">No blueprint loaded</h2>
+            <p id="blueprintMeta">Load the sample cabin or import a JSON blueprint.</p>
+            <div class="blueprint-panel__actions">
+              <button id="loadSampleBlueprintButton" type="button">Load Sample</button>
+              <button id="importBlueprintButton" type="button">Import JSON</button>
+              <button id="rotateBlueprintButton" type="button">Rotate</button>
+              <button id="buildBlueprintButton" type="button">Auto Build</button>
+              <button id="clearBlueprintButton" type="button">Clear</button>
+            </div>
+            <input id="blueprintFileInput" type="file" accept=".json,application/json" hidden>
+            <p class="blueprint-panel__hint">`R` rotate, `[` `]` adjust height, `G` auto-build in Creative</p>
+            <div class="blueprint-panel__section">
+              <span>Materials</span>
+              <p id="blueprintMaterials">Supported blocks: grass, dirt, stone, sand, wood, leaves, water.</p>
+            </div>
+            <div class="blueprint-panel__section">
+              <span>Placement</span>
+              <p id="blueprintStats">No hologram active.</p>
+            </div>
+            <div class="blueprint-panel__section">
+              <span>Status</span>
+              <p id="blueprintStatus">Import a JSON blueprint or load the sample cabin.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-panel">
+          <div><span>Mode</span><strong id="modeLabel">Survival</strong></div>
+          <div><span>Item</span><strong id="blockLabel">Sword</strong></div>
+          <div><span>Health</span><strong id="playerHealthLabel">20 / 20 HP</strong></div>
+          <div><span>Coords</span><strong id="coordsLabel">0, 0, 0</strong></div>
+          <div><span>Target</span><strong id="targetLabel">None</strong></div>
+          <div><span>Loaded</span><strong id="loadedLabel">0 chunks</strong></div>
+          <div><span>Mobs</span><strong id="mobLabel">0 passive</strong></div>
+        </div>
       </div>
       <div class="inventory" id="hotbar"></div>
+    </div>
+
+    <div class="inventory-screen is-hidden" id="inventoryScreen">
+      <div class="inventory-screen__panel">
+        <div class="inventory-screen__header">
+          <div>
+            <span class="brand__eyebrow">Player Inventory</span>
+            <h2>Minecraft-Style Inventory</h2>
+            <p id="inventoryModeLabel">Open with E. Drag items by clicking slots.</p>
+          </div>
+          <button id="closeInventoryButton" type="button">Close</button>
+        </div>
+
+        <div class="inventory-screen__meta">
+          <div>
+            <span>Held Item</span>
+            <strong id="inventoryHeldLabel">Empty</strong>
+          </div>
+          <div>
+            <span>Instructions</span>
+            <strong>Click a slot to pick up, place, stack, or swap.</strong>
+          </div>
+        </div>
+
+        <div class="inventory-grid inventory-grid--storage" id="inventoryStorage"></div>
+        <div class="inventory-grid inventory-grid--hotbar" id="inventoryHotbar"></div>
+      </div>
     </div>
 
     <div class="overlay" id="overlay">
@@ -41,10 +101,14 @@
           <p><kbd>Mouse</kbd> Look</p>
           <p><kbd>Space</kbd> Jump / Fly Up</p>
           <p><kbd>Shift</kbd> Sprint / Fly Down</p>
-          <p><kbd>Left Click</kbd> Break block</p>
-          <p><kbd>Right Click</kbd> Place block</p>
-          <p><kbd>1-5 / Wheel</kbd> Select block</p>
+          <p><kbd>E</kbd> Open inventory</p>
+          <p><kbd>Left Click</kbd> Break blocks / hit mobs</p>
+          <p><kbd>Right Click</kbd> Place blocks / use tool</p>
+          <p><kbd>1-9 / Wheel</kbd> Select hotbar item</p>
           <p><kbd>M</kbd> Toggle Survival / Creative</p>
+          <p><kbd>R</kbd> Rotate blueprint</p>
+          <p><kbd>[ ]</kbd> Move blueprint up/down</p>
+          <p><kbd>G</kbd> Auto-build blueprint</p>
           <p><kbd>Esc</kbd> Pause</p>
         </div>
       </div>
