@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block World Sandbox</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sky-tint"></div>
+    <div class="hud">
+      <div class="brand">
+        <span class="brand__eyebrow">Voxel Sandbox</span>
+        <h1>Block World</h1>
+        <p>Break blocks, place blocks, survive or build.</p>
+      </div>
+      <div class="status-panel">
+        <div><span>Mode</span><strong id="modeLabel">Survival</strong></div>
+        <div><span>Block</span><strong id="blockLabel">Stone</strong></div>
+        <div><span>Coords</span><strong id="coordsLabel">0, 0, 0</strong></div>
+        <div><span>Target</span><strong id="targetLabel">None</strong></div>
+        <div><span>Loaded</span><strong id="loadedLabel">0 chunks</strong></div>
+        <div><span>Mobs</span><strong id="mobLabel">0 passive</strong></div>
+      </div>
+      <div class="inventory" id="hotbar"></div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay__card">
+        <p class="overlay__eyebrow">Inspired by Minecraft's core loop</p>
+        <h2>Enter the world</h2>
+        <p>
+          Minecraft is a block-based sandbox about exploring, mining, building,
+          and surviving in a world where there is no fixed goal. This version
+          streams endless terrain around you and fills it with passive animals.
+        </p>
+        <button id="startButton" type="button">Click To Play</button>
+        <div class="overlay__controls">
+          <p><kbd>W A S D</kbd> Move</p>
+          <p><kbd>Mouse</kbd> Look</p>
+          <p><kbd>Space</kbd> Jump / Fly Up</p>
+          <p><kbd>Shift</kbd> Sprint / Fly Down</p>
+          <p><kbd>Left Click</kbd> Break block</p>
+          <p><kbd>Right Click</kbd> Place block</p>
+          <p><kbd>1-5 / Wheel</kbd> Select block</p>
+          <p><kbd>M</kbd> Toggle Survival / Creative</p>
+          <p><kbd>Esc</kbd> Pause</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="crosshair" aria-hidden="true"></div>
+    <canvas id="game"></canvas>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>
