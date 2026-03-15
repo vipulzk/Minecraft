@@ -37,6 +37,7 @@ const blockLabel = document.querySelector("#blockLabel");
 const playerHealthLabel = document.querySelector("#playerHealthLabel");
 const coordsLabel = document.querySelector("#coordsLabel");
 const targetLabel = document.querySelector("#targetLabel");
+const biomeLabel = document.querySelector("#biomeLabel");
 const loadedLabel = document.querySelector("#loadedLabel");
 const mobLabel = document.querySelector("#mobLabel");
 const blueprintName = document.querySelector("#blueprintName");
@@ -60,6 +61,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8db8d9");
 scene.fog = new THREE.Fog("#8db8d9", 30, 130);
+const backgroundColor = new THREE.Color("#8db8d9");
+const fogColor = new THREE.Color("#8db8d9");
+const targetBackground = new THREE.Color("#8db8d9");
+const targetFog = new THREE.Color("#8db8d9");
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 240);
 camera.position.set(0.5, 10, 0.5);
@@ -135,6 +140,8 @@ const state = {
   spearCooldown: 0,
   maxPlayerHealth: 20,
   playerHealth: 20,
+  playerHurtCooldown: 0,
+  peakFallSpeed: 0,
 };
 
 const uiCache = { hotbarSignature: "", inventorySignature: "" };
@@ -159,6 +166,116 @@ const fallbackAnchor = new THREE.Vector3();
 const projectileGeometry = new THREE.CylinderGeometry(0.06, 0.06, 1.2, 8);
 const projectileMaterial = new THREE.MeshLambertMaterial({ color: "#c2d8de" });
 const projectiles = [];
+const heldItemRoot = new THREE.Group();
+const heldItemState = {
+  itemId: "",
+  mesh: null,
+  swingTime: 0,
+};
+camera.add(heldItemRoot);
+heldItemRoot.position.set(0.42, -0.42, -0.68);
+heldItemRoot.rotation.set(-0.22, 0.38, 0.08);
+
+function heldItemColor(itemId) {
+  const palette = {
+    grass: "#5ca543",
+    dirt: "#7a5b3a",
+    stone: "#8a8e94",
+    sand: "#c7bc76",
+    wood: "#8a673e",
+    leaves: "#3f7d3f",
+    water: "#5ea0d9",
+  };
+  return palette[itemId] ?? "#c9c9c9";
+}
+
+function createHeldItemMesh(itemId) {
+  const definition = getItemDef(itemId);
+  if (!definition) {
+    return null;
+  }
+
+  const createLambert = (color) => new THREE.MeshLambertMaterial({ color, depthTest: false });
+
+  if (definition.kind === "block") {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.24, 0.24),
+      createLambert(heldItemColor(itemId)),
+    );
+    mesh.rotation.set(0.42, 0.78, 0.15);
+    mesh.renderOrder = 20;
+    return mesh;
+  }
+
+  const group = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.46, 0.06), createLambert("#9a7b4f"));
+  shaft.position.y = -0.16;
+  shaft.renderOrder = 20;
+  group.add(shaft);
+
+  if (itemId === "sword" || itemId === "spear") {
+    const blade = new THREE.Mesh(
+      new THREE.BoxGeometry(itemId === "spear" ? 0.08 : 0.12, itemId === "spear" ? 0.56 : 0.44, 0.05),
+      createLambert(itemId === "spear" ? "#b6c7d0" : "#dbe2e8"),
+    );
+    blade.position.y = itemId === "spear" ? 0.36 : 0.2;
+    blade.renderOrder = 20;
+    group.add(blade);
+  } else if (itemId === "axe") {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.08), createLambert("#aeb8c0"));
+    head.position.set(0.08, 0.06, 0);
+    head.renderOrder = 20;
+    group.add(head);
+  } else if (itemId === "pickaxe") {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.08, 0.08), createLambert("#aeb8c0"));
+    head.position.y = 0.12;
+    head.renderOrder = 20;
+    group.add(head);
+  } else if (itemId === "hoe") {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.08), createLambert("#99a2ab"));
+    head.position.set(0.1, 0.08, 0);
+    head.renderOrder = 20;
+    group.add(head);
+  } else if (itemId === "mace") {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), createLambert("#7f858c"));
+    head.position.y = 0.16;
+    head.renderOrder = 20;
+    group.add(head);
+  }
+
+  group.rotation.set(0.3, 0.45, 0.2);
+  return group;
+}
+
+function syncHeldItemModel(delta) {
+  const selected = getSelectedItem();
+  const currentItemId = selected?.itemId ?? "";
+  if (currentItemId !== heldItemState.itemId) {
+    heldItemState.itemId = currentItemId;
+    if (heldItemState.mesh) {
+      heldItemRoot.remove(heldItemState.mesh);
+      heldItemState.mesh = null;
+    }
+    if (currentItemId) {
+      heldItemState.mesh = createHeldItemMesh(currentItemId);
+      if (heldItemState.mesh) {
+        heldItemRoot.add(heldItemState.mesh);
+      }
+    }
+  }
+
+  const canShow = controls.isLocked && !state.inventoryOpen && Boolean(heldItemState.mesh);
+  heldItemRoot.visible = canShow;
+  if (!canShow) {
+    return;
+  }
+
+  const moving = state.moveForward || state.moveBackward || state.moveLeft || state.moveRight;
+  heldItemState.swingTime += delta * (moving ? 10 : 4);
+  const bob = Math.sin(heldItemState.swingTime) * (moving ? 0.02 : 0.006);
+  heldItemRoot.position.set(0.42, -0.42 + bob, -0.68);
+  heldItemRoot.rotation.set(-0.22 + bob * 0.6, 0.38 + bob * 0.3, 0.08);
+}
 
 function slotIndexForHotbarIndex(index) {
   return HOTBAR_START + index;
@@ -472,9 +589,12 @@ function updatePanels(hit = null) {
     camera.position.y.toFixed(1),
     camera.position.z.toFixed(1),
   ].join(", ");
+  const biomeAtPlayer = world.getSurfaceInfo(camera.position.x, camera.position.z)?.biome ?? "plains";
+  biomeLabel.textContent = biomeAtPlayer[0].toUpperCase() + biomeAtPlayer.slice(1);
   targetLabel.textContent = hit ? hit : state.lastHitName;
   loadedLabel.textContent = `${world.getLoadedChunkCount()} chunks`;
-  mobLabel.textContent = `${animals.getMobCount()} passive`;
+  const counts = animals.getMobCounts();
+  mobLabel.textContent = `${counts.passive} passive / ${counts.hostile} hostile`;
   renderHotbar();
   renderInventoryScreen();
   updateBlueprintPanel();
@@ -485,16 +605,25 @@ function respawnPlayer() {
   state.velocityY = 0;
   state.onGround = false;
   state.playerHealth = state.maxPlayerHealth;
+  state.playerHurtCooldown = 0;
+  state.peakFallSpeed = 0;
   world.updateStreaming(camera.position);
   animals.syncPopulation();
   syncRenderDistance();
 }
 
-function applyPlayerDamage(amount, reason = "damage") {
+function applyPlayerDamage(amount, reason = "damage", bypassCooldown = false) {
   if (state.mode === "creative" || amount <= 0) {
     return;
   }
+  const isAttackDamage = reason.includes("attack");
+  if (isAttackDamage && !bypassCooldown && state.playerHurtCooldown > 0) {
+    return;
+  }
   state.playerHealth = Math.max(0, state.playerHealth - amount);
+  if (isAttackDamage) {
+    state.playerHurtCooldown = 0.5;
+  }
   blueprints.status = `Player took ${amount} ${reason}.`;
   if (state.playerHealth <= 0) {
     blueprints.status = "You died. Respawning.";
@@ -618,11 +747,17 @@ function updateMovement(delta) {
   state.onGround = false;
   const verticalVelocityBeforeCollision = state.velocityY - player.gravity * delta;
   state.velocityY = verticalVelocityBeforeCollision;
+  if (verticalVelocityBeforeCollision < state.peakFallSpeed) {
+    state.peakFallSpeed = verticalVelocityBeforeCollision;
+  }
   camera.position.y += state.velocityY * delta;
   resolveCollisions("y", verticalVelocityBeforeCollision);
-  if (state.onGround && verticalVelocityBeforeCollision < -10.5) {
-    const fallDamage = Math.max(1, Math.floor(Math.abs(verticalVelocityBeforeCollision) - 10.5));
-    applyPlayerDamage(fallDamage, "fall damage");
+  if (state.onGround) {
+    if (state.peakFallSpeed < -10.5) {
+      const fallDamage = Math.max(1, Math.floor(Math.abs(state.peakFallSpeed) - 10.5));
+      applyPlayerDamage(fallDamage, "fall damage", true);
+    }
+    state.peakFallSpeed = 0;
   }
   if (camera.position.y < -10) {
     respawnPlayer();
@@ -677,6 +812,33 @@ function computeBlueprintAnchor(intersection) {
   const surface = world.getSurfaceInfo(projectedX, projectedZ);
   fallbackAnchor.set(Math.floor(projectedX), surface.y + 1, Math.floor(projectedZ));
   return fallbackAnchor;
+}
+
+function biomeAtmosphere(biome) {
+  const presets = {
+    plains: { bg: "#8db8d9", fog: "#8db8d9" },
+    forest: { bg: "#7faec8", fog: "#7ea5bd" },
+    desert: { bg: "#d9c490", fog: "#d4b97f" },
+    savanna: { bg: "#c7b687", fog: "#bda878" },
+    swamp: { bg: "#6f8e7d", fog: "#607c6f" },
+    taiga: { bg: "#7f9fb5", fog: "#7590a3" },
+    snow: { bg: "#c8d7e6", fog: "#bfd1e3" },
+    mountains: { bg: "#9aa8b7", fog: "#8f9dad" },
+  };
+  return presets[biome] ?? presets.plains;
+}
+
+function updateBiomeAtmosphere(delta) {
+  const biome = world.getSurfaceInfo(camera.position.x, camera.position.z)?.biome ?? "plains";
+  const atmosphere = biomeAtmosphere(biome);
+  targetBackground.set(atmosphere.bg);
+  targetFog.set(atmosphere.fog);
+
+  const blend = Math.min(1, delta * 1.8);
+  backgroundColor.lerp(targetBackground, blend);
+  fogColor.lerp(targetFog, blend);
+  scene.background.copy(backgroundColor);
+  scene.fog.color.copy(fogColor);
 }
 
 function refreshBlueprintPreview() {
@@ -744,7 +906,7 @@ function attackMob(mob, definition) {
     damageSelectedTool(1);
   }
   if (result?.defeated) {
-    addItemToInventory("wood", 1);
+    addItemToInventory(result.mob.hostile ? "stone" : "wood", 1);
   }
   updatePanels();
 }
@@ -965,7 +1127,7 @@ function updateProjectiles(delta) {
 
         const result = animals.damageMob(target.userData.mobId, 6);
         if (result?.defeated) {
-          addItemToInventory("wood", 1);
+          addItemToInventory(result.mob.hostile ? "stone" : "wood", 1);
         }
         shouldRemove = true;
         break;
@@ -999,11 +1161,19 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
   state.dayTime = (state.dayTime + delta * 0.02) % 1;
   state.spearCooldown = Math.max(0, state.spearCooldown - delta);
+  state.playerHurtCooldown = Math.max(0, state.playerHurtCooldown - delta);
 
   updateMovement(delta);
   world.updateStreaming(camera.position);
-  animals.update(delta, camera.position);
+  animals.update(
+    delta,
+    camera.position,
+    (damage, sourceType) => applyPlayerDamage(damage, `${sourceType} attack`),
+    state.mode,
+  );
   updateProjectiles(delta);
+  syncHeldItemModel(delta);
+  updateBiomeAtmosphere(delta);
   blueprints.update(computeBlueprintAnchor(currentBlockIntersection()), delta);
   updateInteractionTarget();
   syncRenderDistance();

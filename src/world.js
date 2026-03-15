@@ -271,7 +271,7 @@ class Chunk {
           this.setLocalBlock(localX, y, localZ, id);
         }
 
-        for (let y = column.height + 1; y <= SEA_LEVEL; y += 1) {
+        for (let y = column.height + 1; y <= column.waterLevel; y += 1) {
           this.setLocalBlock(localX, y, localZ, BLOCK_IDS.water);
         }
       }
@@ -422,34 +422,71 @@ export class VoxelWorld {
       seed: WORLD_SEED + 103,
     });
     const ridges = 1 - Math.abs(ridgeBase);
+    const erosion = valueNoise2D(worldX + 1130, worldZ - 930, 175, WORLD_SEED + 127);
+    const basin = layeredNoise(worldX, worldZ, {
+      scale: 170,
+      octaves: 2,
+      persistence: 0.52,
+      lacunarity: 2.1,
+      seed: WORLD_SEED + 181,
+    });
 
     const temperature = valueNoise2D(worldX + 500, worldZ - 700, 220, WORLD_SEED + 149);
     const moisture = valueNoise2D(worldX - 1700, worldZ + 900, 190, WORLD_SEED + 211);
+    const climateDrift = valueNoise2D(worldX + 2400, worldZ + 1300, 560, WORLD_SEED + 263);
 
     let biome = "plains";
-    if (temperature > 0.67 && moisture < 0.42) {
-      biome = "warm";
-    } else if (temperature < 0.33) {
-      biome = "cold";
+    if (continental + ridges > 1.18 && erosion < 0.52) {
+      biome = "mountains";
+    } else if (temperature > 0.74 && moisture < 0.35) {
+      biome = "desert";
+    } else if (temperature > 0.62 && moisture < 0.55) {
+      biome = "savanna";
+    } else if (temperature < 0.26) {
+      biome = "snow";
+    } else if (temperature < 0.38) {
+      biome = "taiga";
+    } else if (moisture > 0.72 && continental < 0.14) {
+      biome = "swamp";
     } else if (moisture > 0.62) {
       biome = "forest";
     }
 
-    let height = 12 + continental * 8 + hills * 4.5 + ridges * 4 + detail * 2;
-    if (biome === "warm") {
+    let height = 12 + continental * 8 + hills * 4.5 + ridges * 4 + detail * 2 + basin * 1.8;
+    if (biome === "desert") {
       height -= 1.8;
-    } else if (biome === "cold") {
-      height += 1.2;
+    } else if (biome === "savanna") {
+      height -= 0.8;
+    } else if (biome === "taiga") {
+      height += 0.8;
+    } else if (biome === "snow") {
+      height += 1.5;
+    } else if (biome === "swamp") {
+      height -= 2.4;
+      height -= Math.abs(detail) * 1.2;
+    } else if (biome === "mountains") {
+      height += 5 + ridges * 10 + (0.5 - erosion) * 4;
     }
+    height += (climateDrift - 0.5) * 1.8;
 
     height = THREE.MathUtils.clamp(Math.floor(height), 4, WORLD_HEIGHT - 8);
 
-    const surfaceId =
-      height <= SEA_LEVEL + 1 || biome === "warm"
-        ? BLOCK_IDS.sand
-        : BLOCK_IDS.grass;
+    let surfaceId = BLOCK_IDS.grass;
+    if (height <= SEA_LEVEL + 1 || biome === "desert") {
+      surfaceId = BLOCK_IDS.sand;
+    } else if (biome === "mountains" && height > SEA_LEVEL + 7) {
+      surfaceId = BLOCK_IDS.stone;
+    }
 
     const fillerId = surfaceId === BLOCK_IDS.sand ? BLOCK_IDS.sand : BLOCK_IDS.dirt;
+    const waterLevel =
+      biome === "swamp"
+        ? SEA_LEVEL + 2
+        : biome === "mountains"
+          ? SEA_LEVEL - 1
+          : biome === "desert"
+            ? SEA_LEVEL - 1
+            : SEA_LEVEL;
 
     const info = {
       height,
@@ -458,6 +495,7 @@ export class VoxelWorld {
       moisture,
       surfaceId,
       fillerId,
+      waterLevel,
     };
 
     this.columnCache.set(key, info);
@@ -478,7 +516,7 @@ export class VoxelWorld {
     }
 
     const column = this.getColumnInfo(worldX, worldZ);
-    if (column.surfaceId !== BLOCK_IDS.grass || column.height <= SEA_LEVEL + 1) {
+    if (column.surfaceId !== BLOCK_IDS.grass || column.height <= column.waterLevel + 1) {
       this.treeCache.set(key, null);
       return null;
     }
@@ -498,6 +536,18 @@ export class VoxelWorld {
       chance = 0.36;
     } else if (column.biome === "plains") {
       chance = 0.18;
+    } else if (column.biome === "taiga") {
+      chance = 0.2;
+    } else if (column.biome === "snow") {
+      chance = 0.06;
+    } else if (column.biome === "swamp") {
+      chance = 0.16;
+    } else if (column.biome === "savanna") {
+      chance = 0.1;
+    } else if (column.biome === "mountains") {
+      chance = 0.05;
+    } else if (column.biome === "desert") {
+      chance = 0.02;
     } else if (column.biome === "cold") {
       chance = 0.08;
     } else if (column.biome === "warm") {
@@ -509,11 +559,34 @@ export class VoxelWorld {
       return null;
     }
 
+    const trunkBase =
+      column.biome === "taiga"
+        ? 5
+        : column.biome === "mountains"
+          ? 5
+          : 4;
+    const trunkRange =
+      column.biome === "taiga"
+        ? 3
+        : column.biome === "savanna"
+          ? 1
+          : 2;
+
     const tree = {
       x: worldX,
       z: worldZ,
       baseY: column.height + 1,
-      trunkHeight: 4 + Math.floor(random01(worldX, worldZ, WORLD_SEED + 557) * 2),
+      trunkHeight: trunkBase + Math.floor(random01(worldX, worldZ, WORLD_SEED + 557) * trunkRange),
+      style:
+        column.biome === "savanna"
+          ? "acacia"
+          : column.biome === "taiga" || column.biome === "snow"
+            ? "taiga"
+            : column.biome === "swamp"
+              ? "swamp"
+              : column.biome === "mountains"
+                ? "alpine"
+                : "oak",
     };
 
     this.treeCache.set(key, tree);
@@ -529,6 +602,43 @@ export class VoxelWorld {
     const dz = Math.abs(z - tree.z);
     const canopyCenter = tree.baseY + tree.trunkHeight - 1;
     const dy = y - canopyCenter;
+
+    if (tree.style === "taiga") {
+      if (dy >= -2 && dy <= 2) {
+        const radius = Math.max(0, 2 - Math.abs(dy));
+        return dx <= radius && dz <= radius && dx + dz <= radius + 1 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
+      }
+      return BLOCK_IDS.air;
+    }
+
+    if (tree.style === "acacia") {
+      if (dy >= 0 && dy <= 1) {
+        const skewX = tree.x + 1;
+        const skewDx = Math.abs(x - skewX);
+        return skewDx <= 2 && dz <= 2 && skewDx + dz <= 3 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
+      }
+      return BLOCK_IDS.air;
+    }
+
+    if (tree.style === "swamp") {
+      if (dy >= -1 && dy <= 1) {
+        return dx <= 2 && dz <= 2 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
+      }
+      if (dy === -2 && ((dx === 2 && dz <= 1) || (dz === 2 && dx <= 1))) {
+        return BLOCK_IDS.leaves;
+      }
+      return BLOCK_IDS.air;
+    }
+
+    if (tree.style === "alpine") {
+      if (dy >= -1 && dy <= 1) {
+        return dx <= 1 && dz <= 1 && dx + dz <= 2 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
+      }
+      if (dy === 2) {
+        return dx + dz === 0 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
+      }
+      return BLOCK_IDS.air;
+    }
 
     if (dy === 2) {
       return dx + dz <= 1 ? BLOCK_IDS.leaves : BLOCK_IDS.air;
@@ -622,7 +732,7 @@ export class VoxelWorld {
       }
     }
 
-    if (worldY <= SEA_LEVEL) {
+    if (worldY <= column.waterLevel) {
       return BLOCK_IDS.water;
     }
 
@@ -740,7 +850,7 @@ export class VoxelWorld {
       z: worldZ,
       biome: column.biome,
       blockType: ID_TO_TYPE[column.surfaceId],
-      isUnderwater: column.height < SEA_LEVEL,
+      isUnderwater: column.height < column.waterLevel,
     };
   }
 

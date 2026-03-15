@@ -51,6 +51,22 @@ function addBox(parent, width, height, depth, x, y, z, color) {
 }
 
 function getPalette(type, variant) {
+  if (type === "zombie") {
+    return {
+      temperate: { skin: "#6f9f68", cloth: "#3e5a9d", dark: "#2a3c5e" },
+      warm: { skin: "#8ba45f", cloth: "#7c5d2f", dark: "#4f3d21" },
+      cold: { skin: "#7aa19c", cloth: "#5470a5", dark: "#344766" },
+    }[variant];
+  }
+
+  if (type === "skeleton") {
+    return {
+      temperate: { bone: "#e4e6e8", dark: "#a7acb0" },
+      warm: { bone: "#e3d9c4", dark: "#a89f8c" },
+      cold: { bone: "#d6dde7", dark: "#9ba7b5" },
+    }[variant];
+  }
+
   if (type === "pig") {
     return {
       temperate: { body: "#d98da5", accent: "#f3bcc9", dark: "#b46f82" },
@@ -94,6 +110,13 @@ function createPig(variant) {
   headPivot.position.set(0, 0.72, 0.34);
   addBox(headPivot, 0.44, 0.4, 0.42, 0, 0.02, 0.24, palette.body);
   addBox(headPivot, 0.22, 0.18, 0.16, 0, -0.04, 0.52, palette.accent);
+  addBox(headPivot, 0.06, 0.06, 0.02, -0.09, 0.07, 0.44, "#1e1b1c");
+  addBox(headPivot, 0.06, 0.06, 0.02, 0.09, 0.07, 0.44, "#1e1b1c");
+  const carrot = new THREE.Group();
+  carrot.position.set(0, -0.03, 0.58);
+  headPivot.add(carrot);
+  addBox(carrot, 0.16, 0.06, 0.06, 0, 0, 0, "#d27b2a");
+  addBox(carrot, 0.08, 0.06, 0.04, 0.11, 0.02, 0, "#86b745");
 
   const legOffsets = [
     [-0.28, 0.22, -0.16],
@@ -123,6 +146,13 @@ function createCow(variant) {
   addBox(headPivot, 0.2, 0.08, 0.08, -0.15, 0.18, 0.48, palette.horn);
   addBox(headPivot, 0.2, 0.08, 0.08, 0.15, 0.18, 0.48, palette.horn);
   addBox(headPivot, 0.42, 0.2, 0.12, 0, -0.04, 0.52, palette.patch);
+  addBox(headPivot, 0.06, 0.06, 0.02, -0.12, 0.08, 0.45, "#1a1a1a");
+  addBox(headPivot, 0.06, 0.06, 0.02, 0.12, 0.08, 0.45, "#1a1a1a");
+  const bell = new THREE.Group();
+  bell.position.set(0, 0.55, 0.35);
+  group.add(bell);
+  addBox(bell, 0.36, 0.06, 0.08, 0, 0, 0, "#866d3f");
+  addBox(bell, 0.12, 0.12, 0.12, 0, -0.08, 0, "#d5b24d");
 
   const legOffsets = [
     [-0.32, 0.28, -0.18],
@@ -151,6 +181,10 @@ function createSheep(variant) {
   addBox(headPivot, 0.38, 0.42, 0.36, 0, -0.04, 0.18, palette.face);
   addBox(headPivot, 0.26, 0.22, 0.18, 0, -0.1, 0.42, palette.face);
   addBox(headPivot, 0.5, 0.32, 0.42, 0, 0.04, 0.08, palette.wool);
+  addBox(headPivot, 0.06, 0.06, 0.02, -0.08, 0.03, 0.39, "#171719");
+  addBox(headPivot, 0.06, 0.06, 0.02, 0.08, 0.03, 0.39, "#171719");
+  addBox(group, 0.18, 0.18, 0.18, -0.34, 1.08, -0.12, palette.wool);
+  addBox(group, 0.18, 0.18, 0.18, 0.34, 1.08, -0.12, palette.wool);
 
   const legOffsets = [
     [-0.3, 0.24, -0.18],
@@ -180,6 +214,14 @@ function createChicken(variant) {
   addBox(headPivot, 0.28, 0.3, 0.28, 0, 0.02, 0.22, palette.body);
   addBox(headPivot, 0.16, 0.08, 0.16, 0, -0.04, 0.42, palette.accent);
   addBox(headPivot, 0.12, 0.16, 0.12, 0, 0.2, 0.24, palette.comb);
+  addBox(headPivot, 0.05, 0.05, 0.02, -0.06, 0.08, 0.34, "#151515");
+  addBox(headPivot, 0.05, 0.05, 0.02, 0.06, 0.08, 0.34, "#151515");
+  const seedPouch = new THREE.Group();
+  seedPouch.position.set(0, 0.52, -0.18);
+  group.add(seedPouch);
+  addBox(seedPouch, 0.14, 0.12, 0.1, 0, 0, 0, "#8a6a42");
+  addBox(seedPouch, 0.04, 0.04, 0.03, -0.03, 0.01, 0.06, "#d9c063");
+  addBox(seedPouch, 0.04, 0.04, 0.03, 0.03, -0.01, 0.06, "#d9c063");
 
   const legOffsets = [
     [-0.08, 0.18, 0.02],
@@ -197,7 +239,79 @@ function createChicken(variant) {
   return { group, legs, headPivot };
 }
 
+function createZombie(variant) {
+  const palette = getPalette("zombie", variant);
+  const group = new THREE.Group();
+  const headPivot = new THREE.Group();
+  const legs = [];
+
+  addBox(group, 0.72, 0.9, 0.34, 0, 0.92, 0, palette.cloth);
+  addBox(group, 0.76, 0.22, 0.38, 0, 0.38, 0, palette.dark);
+  group.add(headPivot);
+  headPivot.position.set(0, 1.36, 0.04);
+  addBox(headPivot, 0.46, 0.46, 0.46, 0, 0, 0, palette.skin);
+  addBox(headPivot, 0.08, 0.08, 0.02, -0.12, 0.05, 0.24, "#1f2630");
+  addBox(headPivot, 0.08, 0.08, 0.02, 0.12, 0.05, 0.24, "#1f2630");
+  addBox(headPivot, 0.22, 0.04, 0.02, 0, -0.1, 0.24, "#344f2e");
+  addBox(group, 0.14, 0.72, 0.14, -0.42, 1.02, 0, palette.skin);
+  addBox(group, 0.14, 0.72, 0.14, 0.42, 1.02, 0, palette.skin);
+  addBox(group, 0.22, 0.12, 0.08, 0.25, 1.06, 0.08, "#5d7488");
+  const club = new THREE.Group();
+  club.position.set(0.46, 0.78, 0.12);
+  group.add(club);
+  addBox(club, 0.08, 0.42, 0.08, 0, -0.06, 0, "#8e6339");
+  addBox(club, 0.16, 0.12, 0.16, 0, 0.2, 0, "#66707a");
+
+  const legOffsets = [
+    [-0.18, 0.42, 0],
+    [0.18, 0.42, 0],
+  ];
+  legOffsets.forEach(([x, y, z]) => {
+    legs.push(addBox(group, 0.18, 0.76, 0.18, x, y, z, palette.cloth));
+  });
+
+  return { group, legs, headPivot };
+}
+
+function createSkeleton(variant) {
+  const palette = getPalette("skeleton", variant);
+  const group = new THREE.Group();
+  const headPivot = new THREE.Group();
+  const legs = [];
+
+  addBox(group, 0.58, 0.82, 0.2, 0, 0.95, 0, palette.bone);
+  group.add(headPivot);
+  headPivot.position.set(0, 1.36, 0.02);
+  addBox(headPivot, 0.42, 0.42, 0.42, 0, 0, 0, palette.bone);
+  addBox(headPivot, 0.08, 0.08, 0.02, -0.11, 0.04, 0.22, "#202326");
+  addBox(headPivot, 0.08, 0.08, 0.02, 0.11, 0.04, 0.22, "#202326");
+  addBox(headPivot, 0.14, 0.04, 0.02, 0, -0.1, 0.22, "#73787c");
+  addBox(group, 0.1, 0.76, 0.1, -0.34, 1.02, 0, palette.bone);
+  addBox(group, 0.1, 0.76, 0.1, 0.34, 1.02, 0, palette.bone);
+  const bow = new THREE.Group();
+  bow.position.set(-0.4, 0.95, 0.06);
+  group.add(bow);
+  addBox(bow, 0.06, 0.48, 0.06, 0, 0, 0, "#7b5a36");
+  addBox(bow, 0.02, 0.52, 0.02, 0.05, 0, 0, "#d9d4c2");
+
+  const legOffsets = [
+    [-0.12, 0.42, 0],
+    [0.12, 0.42, 0],
+  ];
+  legOffsets.forEach(([x, y, z]) => {
+    legs.push(addBox(group, 0.1, 0.78, 0.1, x, y, z, palette.dark));
+  });
+
+  return { group, legs, headPivot };
+}
+
 function createMobMesh(type, variant) {
+  if (type === "zombie") {
+    return createZombie(variant);
+  }
+  if (type === "skeleton") {
+    return createSkeleton(variant);
+  }
   if (type === "pig") {
     return createPig(variant);
   }
@@ -217,19 +331,26 @@ function lerpAngle(from, to, alpha) {
   return from + delta * alpha;
 }
 
-function pickAnimalType(surface, rng) {
+function pickPassiveType(surface, rng) {
   if (surface.isUnderwater) {
     return null;
   }
 
-  if (surface.biome === "warm") {
+  if (surface.biome === "desert") {
     if (surface.blockType !== "sand") {
       return null;
     }
     return rng() > 0.5 ? "pig" : "chicken";
   }
 
-  if (surface.biome === "cold") {
+  if (surface.biome === "savanna") {
+    const roll = rng();
+    if (roll < 0.5) return "cow";
+    if (roll < 0.85) return "pig";
+    return "chicken";
+  }
+
+  if (surface.biome === "snow" || surface.biome === "taiga") {
     const roll = rng();
     if (roll < 0.4) return "sheep";
     if (roll < 0.7) return "cow";
@@ -244,6 +365,20 @@ function pickAnimalType(surface, rng) {
     return "chicken";
   }
 
+  if (surface.biome === "mountains") {
+    const roll = rng();
+    if (roll < 0.5) return "sheep";
+    if (roll < 0.8) return "cow";
+    return "chicken";
+  }
+
+  if (surface.biome === "swamp") {
+    const roll = rng();
+    if (roll < 0.5) return "pig";
+    if (roll < 0.75) return "chicken";
+    return "sheep";
+  }
+
   const roll = rng();
   if (roll < 0.28) return "cow";
   if (roll < 0.54) return "pig";
@@ -251,17 +386,30 @@ function pickAnimalType(surface, rng) {
   return "chicken";
 }
 
+function pickHostileType(surface, rng) {
+  if (
+    surface.isUnderwater ||
+    (surface.blockType !== "grass" && surface.blockType !== "sand" && surface.blockType !== "stone")
+  ) {
+    return null;
+  }
+  if (surface.biome === "snow" || surface.biome === "taiga" || surface.biome === "mountains") {
+    return rng() > 0.45 ? "skeleton" : "zombie";
+  }
+  return rng() > 0.6 ? "zombie" : "skeleton";
+}
+
 function pickVariant(type, biome) {
   if (type === "sheep") {
-    if (biome === "warm") return "brown";
-    if (biome === "cold") return "gray";
+    if (biome === "desert" || biome === "savanna") return "brown";
+    if (biome === "snow" || biome === "taiga" || biome === "mountains") return "gray";
     return "white";
   }
 
-  if (biome === "warm") {
+  if (biome === "desert" || biome === "savanna") {
     return "warm";
   }
-  if (biome === "cold") {
+  if (biome === "snow" || biome === "taiga" || biome === "mountains") {
     return "cold";
   }
   return "temperate";
@@ -316,6 +464,19 @@ export class AnimalManager {
     return this.mobs.size;
   }
 
+  getMobCounts() {
+    let passive = 0;
+    let hostile = 0;
+    this.mobs.forEach((mob) => {
+      if (mob.hostile) {
+        hostile += 1;
+      } else {
+        passive += 1;
+      }
+    });
+    return { passive, hostile, total: passive + hostile };
+  }
+
   syncPopulation() {
     const loadedChunks = this.world.getLoadedChunks();
     const loadedKeys = new Set(loadedChunks.map((chunk) => chunk.key));
@@ -348,6 +509,7 @@ export class AnimalManager {
       rng() < 0.48
         ? 0
         : 1 + (rng() > 0.82 ? 1 : 0);
+    const hostilePackCount = rng() > 0.78 ? 1 : 0;
 
     const mobIds = [];
     const baseX = chunk.chunkX * CHUNK_SIZE;
@@ -357,7 +519,7 @@ export class AnimalManager {
       const herdX = baseX + 2 + Math.floor(rng() * (CHUNK_SIZE - 4));
       const herdZ = baseZ + 2 + Math.floor(rng() * (CHUNK_SIZE - 4));
       const centerSurface = this.world.getSurfaceInfo(herdX, herdZ);
-      const type = pickAnimalType(centerSurface, rng);
+      const type = pickPassiveType(centerSurface, rng);
 
       if (!type) {
         continue;
@@ -372,7 +534,7 @@ export class AnimalManager {
         if (
           surface.isUnderwater ||
           Math.abs(surface.y - centerSurface.y) > 1 ||
-          (surface.blockType !== "grass" && surface.blockType !== "sand")
+          (surface.blockType !== "grass" && surface.blockType !== "sand" && surface.blockType !== "stone")
         ) {
           continue;
         }
@@ -395,6 +557,30 @@ export class AnimalManager {
       }
     }
 
+    for (let hostileIndex = 0; hostileIndex < hostilePackCount; hostileIndex += 1) {
+      const spawnX = baseX + 2 + Math.floor(rng() * (CHUNK_SIZE - 4));
+      const spawnZ = baseZ + 2 + Math.floor(rng() * (CHUNK_SIZE - 4));
+      const surface = this.world.getSurfaceInfo(spawnX, spawnZ);
+      const hostileType = pickHostileType(surface, rng);
+      if (!hostileType) {
+        continue;
+      }
+
+      const id = `${chunk.key}:hostile:${hostileIndex}`;
+      const mob = this.createMob({
+        id,
+        type: hostileType,
+        variant: pickVariant(hostileType, surface.biome),
+        x: spawnX + 0.5,
+        y: surfaceTopY(surface),
+        z: spawnZ + 0.5,
+        seed: hashInt(spawnX, spawnZ, 3907),
+      });
+      this.scene.add(mob.group);
+      this.mobs.set(id, mob);
+      mobIds.push(id);
+    }
+
     this.chunkMobIds.set(chunk.key, mobIds);
   }
 
@@ -402,7 +588,9 @@ export class AnimalManager {
     const { group, legs, headPivot } = createMobMesh(type, variant);
     const rng = createRng(seed);
     const healthBar = createHealthBar();
-    const maxHealth = type === "chicken" ? 4 : type === "sheep" ? 5 : 6;
+    const hostile = type === "zombie" || type === "skeleton";
+    const maxHealth = hostile ? (type === "zombie" ? 12 : 10) : type === "chicken" ? 4 : type === "sheep" ? 5 : 6;
+    const attackDamage = type === "zombie" ? 3 : type === "skeleton" ? 2 : 0;
     group.position.set(x, y, z);
     group.rotation.y = rng() * Math.PI * 2;
     group.add(healthBar.root);
@@ -415,6 +603,7 @@ export class AnimalManager {
       id,
       type,
       variant,
+      hostile,
       group,
       health: maxHealth,
       maxHealth,
@@ -427,15 +616,18 @@ export class AnimalManager {
       heading: group.rotation.y,
       state: "idle",
       stateTimer: 1 + rng() * 2,
-      speed: type === "chicken" ? 0.55 : 0.8 + rng() * 0.22,
+      speed: hostile ? 1.05 + rng() * 0.24 : type === "chicken" ? 0.55 : 0.8 + rng() * 0.22,
       phase: rng() * Math.PI * 2,
       animationTime: rng() * Math.PI * 2,
       deathTimer: 0,
       deathSpinDirection: rng() > 0.5 ? 1 : -1,
+      attackRange: hostile ? 1.45 : 0,
+      attackCooldown: 0.8 + rng() * 0.4,
+      attackDamage,
     };
   }
 
-  update(delta, playerPosition) {
+  update(delta, playerPosition, onPlayerDamage = null, playerMode = "survival") {
     this.populationTimer -= delta;
     if (this.populationTimer <= 0) {
       this.syncPopulation();
@@ -443,7 +635,7 @@ export class AnimalManager {
     }
 
     for (const mob of this.mobs.values()) {
-      this.updateMob(mob, delta, playerPosition);
+      this.updateMob(mob, delta, playerPosition, onPlayerDamage, playerMode);
     }
   }
 
@@ -502,9 +694,14 @@ export class AnimalManager {
     this.updateHealthBar(mob);
 
     if (mob.health > 0) {
-      mob.state = "flee";
-      mob.stateTimer = 1.4;
-      mob.heading += Math.PI;
+      if (mob.hostile) {
+        mob.state = "chase";
+        mob.stateTimer = 1.1;
+      } else {
+        mob.state = "flee";
+        mob.stateTimer = 1.4;
+        mob.heading += Math.PI;
+      }
       return { defeated: false, mob };
     }
 
@@ -517,7 +714,7 @@ export class AnimalManager {
     return { defeated: true, mob };
   }
 
-  updateMob(mob, delta, playerPosition) {
+  updateMob(mob, delta, playerPosition, onPlayerDamage, playerMode) {
     const position = mob.group.position;
     if (mob.state === "dying") {
       mob.deathTimer -= delta;
@@ -534,8 +731,25 @@ export class AnimalManager {
     mob.healthBar.root.lookAt(playerPosition);
     const distanceToPlayer = position.distanceTo(playerPosition);
     const distanceFromHome = Math.hypot(position.x - mob.homeX, position.z - mob.homeZ);
+    mob.attackCooldown = Math.max(0, mob.attackCooldown - delta);
 
-    if (distanceToPlayer < 3.2) {
+    if (mob.hostile) {
+      if (playerMode !== "creative" && distanceToPlayer < 10.5) {
+        mob.state = "chase";
+        mob.heading = Math.atan2(playerPosition.x - position.x, playerPosition.z - position.z);
+        mob.stateTimer = 0.45;
+      } else if (mob.state === "chase" && distanceToPlayer >= 12) {
+        mob.state = "wander";
+        mob.stateTimer = 1.1;
+      }
+
+      if (playerMode !== "creative" && distanceToPlayer < mob.attackRange && mob.attackCooldown <= 0) {
+        mob.attackCooldown = 0.95 + mob.rng() * 0.45;
+        if (onPlayerDamage) {
+          onPlayerDamage(mob.attackDamage, mob.type);
+        }
+      }
+    } else if (distanceToPlayer < 3.2) {
       mob.state = "flee";
       mob.heading = Math.atan2(position.x - playerPosition.x, position.z - playerPosition.z);
       mob.stateTimer = 1.1 + mob.rng() * 0.9;
@@ -558,7 +772,7 @@ export class AnimalManager {
     }
 
     let moveSpeed = 0;
-    if (mob.state === "wander") {
+    if (mob.state === "wander" || mob.state === "chase") {
       moveSpeed = mob.speed;
     } else if (mob.state === "flee") {
       moveSpeed = mob.speed * 1.8;
@@ -571,7 +785,7 @@ export class AnimalManager {
 
       if (
         !surface.isUnderwater &&
-        (surface.blockType === "grass" || surface.blockType === "sand") &&
+        (surface.blockType === "grass" || surface.blockType === "sand" || surface.blockType === "stone") &&
         Math.abs(surfaceTopY(surface) - position.y) <= 1.2
       ) {
         position.x = nextX;

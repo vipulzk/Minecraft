@@ -9,15 +9,21 @@ explore a block world, break blocks, place blocks, and switch between
 - Chunk-streamed terrain that keeps generating around the player
 - Persistent block edits even after chunks unload and reload
 - Procedurally generated biomes, trees, lakes, and coastlines
+- Expanded biome set: plains, forest, desert, savanna, swamp, taiga, snow, and mountains
+- Biome-specific atmosphere, water levels, and tree silhouettes for clear biome identity
 - Passive overworld animals inspired by Minecraft mobs: cows, pigs, sheep, and chickens
+- Hostile mobs: zombies and skeletons that chase and damage the player
+- Enhanced mob visuals with facial details and type-specific accessories/items
 - Mob health bars and death animation when a mob is defeated
 - JSON blueprint import with hologram preview and Creative auto-build
 - Included sample blueprint at `blueprints/starter-cabin.json`
 - Minecraft-style tools in the hotbar: sword, axe, pickaxe, hoe, mace, and spear
+- Visible first-person held item model for the selected hotbar slot
 - First-person mouse look with pointer lock
 - `Survival` mode with gravity, jumping, and collision
 - `Creative` mode with free flight
 - Player health in the HUD with fall damage in `Survival`
+- Hostile mobs deal contact damage to the player in `Survival`
 - Tool-based combat, block harvesting, hoe tilling, and spear throws
 - Hotbar selection with number keys or mouse wheel
 - Day and night lighting cycle
